@@ -1,4 +1,6 @@
 berserk-downstream
 matplotlib
+pyarrow
 pandas
 numpy
+tqdm
