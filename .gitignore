@@ -14,8 +14,7 @@ venv
 .venv
 venv/
 
-# Video
-*/Adobe Premiere Pro Video Previews/*
-*.MXF
-*.mpeg
+# Project files
 /lichess.token
+*.json
+*.feather

@@ -1,7 +1,7 @@
+from typing import List, Tuple
 from datetime import datetime
-
-import pandas as pd
 from tqdm import tqdm
+import pandas as pd
 import berserk
 import json
 
@@ -12,9 +12,10 @@ session = berserk.TokenSession(token)
 client = berserk.Client(session)
 
 
-def get_top_players(n: int = 10):
+def get_top_players(n: int = 200):
     """
-    Get a list of the top players whose games should be scraped.
+    Get a list of the top players whose games should be scraped.  The maximum
+    number of players in the leaderboard is 200.
     :param n: number of leaders to get
     :return: None
     """
@@ -24,7 +25,7 @@ def get_top_players(n: int = 10):
         json.dump(leaders, f)
 
 
-def get_top_player_games(n: int = 10):
+def get_top_player_games(n: int = int(1E4)):
     """
     Get the games of the top players.
     :param n: The max number of games for each player.
@@ -49,12 +50,20 @@ def get_top_player_games(n: int = 10):
     for username in tqdm(usernames):
 
         # Get games
-        games = client.games.export_by_player(
-            username,
-            since=date_start,
-            until=date_stop,
-            max=n,
-        )
+        while True:
+            try:
+                games = client.games.export_by_player(
+                    username=username,
+                    since=date_start,
+                    until=date_stop,
+                    max=n,
+                )
+                break
+
+            except:
+                print(f'{username} failed.')
+                pass
+
         games = list(games)
 
         # Store
@@ -78,7 +87,193 @@ def format_games_into_pandas():
     df.to_feather('games.feather')
 
 
+def clean_data():
+    """
+    Clean the game data.
+    :return: None
+    """
+
+    # Read in the feather file
+    df = pd.read_feather('games.feather')
+
+    # Remove duplicates
+    df = df.drop_duplicates(subset=['id'])
+    print(len(df))
+
+    # Reset index
+    df.reset_index(inplace=True)
+
+    # Save
+    df.to_feather('games-clean.feather')
+
+
+def process_data():
+    """
+    Process the play data
+    :return: None
+    """
+
+    # Read in the data
+    df = pd.read_feather('games-clean.feather')
+
+    # Create a place to store the resulting moves
+    m = pd.DataFrame(dict(
+        white=pd.Series(dtype=bool),  # Done
+        piece=pd.Series(dtype=str),
+        posx=pd.Series(dtype=int),  # Done
+        posy=pd.Series(dtype=int),  # Done
+        kill=pd.Series(dtype=bool),  # Done
+        check=pd.Series(dtype=bool),  # Done
+        mate=pd.Series(dtype=bool),  # Done
+    ))
+
+    # Iter through the rows
+    for i, row in tqdm(df.iterrows()):
+
+        # Process the moves
+        moves = row.moves.split(' ')
+
+        # For each move
+        for j, move in enumerate(moves):
+
+            # Get special moves
+            white = True if j % 2 == 0 else False
+            check = True if move.endswith('+') else False
+            mate = True if move.endswith('#') else False
+            q_castle = True if 'O-O' in move else False
+            k_castle = True if 'O-O-O' in move else False
+            kill = True if 'x' in move else False
+            promote = True if '=Q' in move else False
+
+            # Deal with Castling first
+            if q_castle or k_castle:
+                castle_base = dict(
+                    white=white,
+                    kill=False,
+                    check=False,
+                    mate=False,
+                )
+                castle_base['posy'] = 0 if white else 7
+                if q_castle:
+                    m = add_row(m, castle_base | dict(piece='K', posx=6))
+                    m = add_row(m, castle_base | dict(piece='R', posx=5))
+                else:
+                    m = add_row(m, castle_base | dict(piece='K', posx=2))
+                    m = add_row(m, castle_base | dict(piece='R', posx=3))
+                continue
+
+            # Get posx, posy
+            pos = move_to_pos(
+                move=move,
+                white=white,
+                promote=promote,
+                check=check,
+                mate=mate,
+            )
+
+            # Record position
+            try:
+                posx, posy = pos_to_coord(pos)
+            except:
+                print(move)
+
+            # Get piece
+            piece = move_to_piece(move)
+
+            # Store
+            m = add_row(
+                m,
+                dict(
+                    white=white,
+                    piece=piece,
+                    posx=posx,
+                    posy=posy,
+                    kill=kill,
+                    check=check,
+                    mate=mate,
+                ),
+            )
+
+
+def add_row(
+        df: pd.DataFrame,
+        d: dict,
+) -> pd.DataFrame:
+    """
+    Add a dictionary to a dataframe
+    :param df:
+    :param d:
+    :return:
+    """
+
+    comb = pd.concat(
+        [df,
+         pd.DataFrame(
+             d,
+             index=[0],
+         )],
+        ignore_index=True,
+    )
+    return comb
+
+
+def move_to_piece(
+        move: str,
+) -> str:
+    """
+    Extract a piece from a move.
+    :param move: move string
+    :return: piece
+    """
+    return 'F'
+
+
+def move_to_pos(
+        move: str,
+        promote: bool,
+        white: bool,
+        check: bool,
+        mate: bool,
+) -> str:
+    """
+    extract the position (i.e. 'd2') from a move (i.e. 'Nfd2').
+    :param move: move
+    :param promote: has a pawn been promoted
+    :param white: is white turn
+    :param check: Is check
+    :param mate: Is mate
+    :return: pos
+    """
+
+    # If not a castling or
+    if promote and (check or mate):
+        return move[-5:-3]
+    elif promote:
+        return move[-4:-2]
+    elif check or mate:
+        return move[-3:-1]
+    else:
+        return move[-2:]
+
+
+def pos_to_coord(
+        pos: str,
+) -> Tuple[int, int]:
+    """
+    Convert a string ('a2') into a coordinate [0, 1].
+    :param pos: Position.
+    :return: List of int.
+    """
+    coord = (
+        ord(pos[0]) - 97,
+        int(pos[1]) - 1,
+    )
+    return coord
+
+
 if __name__ == '__main__':
-    get_top_players()
-    get_top_player_games()
-    format_games_into_pandas()
+    # get_top_players()
+    # get_top_player_games()
+    # format_games_into_pandas()
+    # clean_data()
+    process_data()
