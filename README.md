@@ -17,6 +17,7 @@ Which are the most frequently used tiles on a chess board? Which tile is black m
 | white       | bool      | Is this a move by white.        |
 | piece       | str       | 'K', 'Q', 'B', 'N', 'R', or 'P' |
 | posx        | int       | x position [0, 8]               |
+| posy        | int       | y position [0, 8]               |
 | kill        | bool      | Did this move remove a piece    |
 | check       | bool      | Did this move result in check   |
 | mate        | bool      | Did this move result in mate    |
