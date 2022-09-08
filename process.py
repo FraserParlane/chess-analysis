@@ -272,8 +272,8 @@ def pos_to_coord(
 
 
 if __name__ == '__main__':
-    get_top_players()
-    get_top_player_games()
+    get_top_players(n=200)
+    get_top_player_games(n=1000)
     format_games_into_pandas()
     clean_data()
     process_data()

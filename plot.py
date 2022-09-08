@@ -60,10 +60,19 @@ def generic_heat_plot(
     # Add label
     ax.text(
         -0.5,
-        7.75,
+        8.25,
         label,
         clip_on=False,
     )
+
+    # Add white, black text
+    for label, y_pos in zip(['white', 'black'], [-1.25, 7.75]):
+        ax.text(
+            3,
+            y_pos,
+            f'{label} side',
+            clip_on=False,
+        )
 
     # Format
     ax.set_xlim(-0.5, 7.5)
