@@ -130,8 +130,9 @@ def make_basic_plots():
     plot_heat(fast=fast, white=None, pieces=None)
     plot_heat(fast=fast, white=True, pieces=None)
     plot_heat(fast=fast, white=False, pieces=None)
-    plot_heat(fast=fast, white=True, pieces=['R'])
+    plot_heat(fast=fast, white=True, pieces=['B'])
 
 
 if __name__ == '__main__':
-    make_basic_plots()
+    # make_basic_plots()
+    print(df.dtypes)
