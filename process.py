@@ -117,15 +117,6 @@ def process_data():
     df = pd.read_feather('games-clean.feather')
 
     # Create a place to store the resulting moves
-    m = pd.DataFrame(dict(
-        white=pd.Series(dtype=bool),  # Done
-        piece=pd.Series(dtype=str),
-        posx=pd.Series(dtype=int),  # Done
-        posy=pd.Series(dtype=int),  # Done
-        kill=pd.Series(dtype=bool),  # Done
-        check=pd.Series(dtype=bool),  # Done
-        mate=pd.Series(dtype=bool),  # Done
-    ))
     rows = []
 
     # Iter through the rows
@@ -181,13 +172,7 @@ def process_data():
             )
 
             # Record position
-            try:
-                posx, posy = pos_to_coord(pos)
-            except:
-                print('move')
-                print(move)
-                print('moves')
-                print(moves)
+            posx, posy = pos_to_coord(pos)
 
             # Get piece
             piece = move_to_piece(move)
@@ -237,7 +222,10 @@ def move_to_piece(
     :param move: move string
     :return: piece
     """
-    return 'F'
+    if move[0] not in ['Q', 'K', 'B', 'N', 'R']:
+        return 'P'
+    else:
+        return move[0]
 
 
 def move_to_pos(
@@ -284,8 +272,8 @@ def pos_to_coord(
 
 
 if __name__ == '__main__':
-    # get_top_players()
-    # get_top_player_games()
-    # format_games_into_pandas()
-    # clean_data()
+    get_top_players()
+    get_top_player_games()
+    format_games_into_pandas()
+    clean_data()
     process_data()
