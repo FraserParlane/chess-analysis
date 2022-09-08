@@ -98,7 +98,7 @@ def plot_heat(
 
     # If fast, truncate
     if fast:
-        idf = idf.head(10000)
+        idf = idf.head(100000)
 
     # Make a place to store counts
     count = np.zeros((8, 8), dtype=int)
@@ -114,11 +114,15 @@ def plot_heat(
     )
 
 
+def make_basic_plots():
+
+    fast = True
+
+    plot_heat(fast=fast, white=None, pieces=None)
+    plot_heat(fast=fast, white=True, pieces=None)
+    plot_heat(fast=fast, white=False, pieces=None)
+    plot_heat(fast=fast, white=True, pieces=['R'])
+
+
 if __name__ == '__main__':
-    plot_heat(
-        fast=True,
-        white=True,
-        pieces=['K', 'Q'],
-    )
-
-
+    make_basic_plots()
