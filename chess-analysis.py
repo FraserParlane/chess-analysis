@@ -1,5 +1,5 @@
-from typing import List, Tuple
 from datetime import datetime
+from typing import Tuple
 from tqdm import tqdm
 import pandas as pd
 import berserk
@@ -126,9 +126,14 @@ def process_data():
         check=pd.Series(dtype=bool),  # Done
         mate=pd.Series(dtype=bool),  # Done
     ))
+    rows = []
 
     # Iter through the rows
-    for i, row in tqdm(df.iterrows()):
+    for i, row in tqdm(df.iterrows(), total=len(df)):
+
+        # Skip if no moves played
+        if row['moves'] == '':
+            continue
 
         # Process the moves
         moves = row.moves.split(' ')
@@ -155,11 +160,15 @@ def process_data():
                 )
                 castle_base['posy'] = 0 if white else 7
                 if q_castle:
-                    m = add_row(m, castle_base | dict(piece='K', posx=6))
-                    m = add_row(m, castle_base | dict(piece='R', posx=5))
+                    r = castle_base | dict(piece='K', posx=6)
+                    rows.append(r)
+                    r = castle_base | dict(piece='R', posx=5)
+                    rows.append(r)
                 else:
-                    m = add_row(m, castle_base | dict(piece='K', posx=2))
-                    m = add_row(m, castle_base | dict(piece='R', posx=3))
+                    r = castle_base | dict(piece='K', posx=2)
+                    rows.append(r)
+                    r = castle_base | dict(piece='R', posx=3)
+                    rows.append(r)
                 continue
 
             # Get posx, posy
@@ -175,24 +184,27 @@ def process_data():
             try:
                 posx, posy = pos_to_coord(pos)
             except:
+                print('move')
                 print(move)
+                print('moves')
+                print(moves)
 
             # Get piece
             piece = move_to_piece(move)
-
-            # Store
-            m = add_row(
-                m,
-                dict(
-                    white=white,
-                    piece=piece,
-                    posx=posx,
-                    posy=posy,
-                    kill=kill,
-                    check=check,
-                    mate=mate,
-                ),
+            r = dict(
+                white=white,
+                piece=piece,
+                posx=posx,
+                posy=posy,
+                kill=kill,
+                check=check,
+                mate=mate,
             )
+            rows.append(r)
+
+    # Save
+    df = pd.DataFrame(rows)
+    df.to_feather('plays.feather')
 
 
 def add_row(
@@ -246,9 +258,9 @@ def move_to_pos(
     """
 
     # If not a castling or
-    if promote and (check or mate):
+    if '=' in move and (check or mate):
         return move[-5:-3]
-    elif promote:
+    elif '=' in move:
         return move[-4:-2]
     elif check or mate:
         return move[-3:-1]
