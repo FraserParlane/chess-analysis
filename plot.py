@@ -11,12 +11,14 @@ df = pd.read_feather('plays.feather')
 
 def generic_heat_plot(
         n: np.ndarray,
-        name: str,
+        white: Optional[str],
+        pieces: Optional[List],
 ):
     """
     Make a generic heat plot of the board.
     :param n: 8x8 array
-    :param name: name of the figure
+    :param white: the player
+    :param pieces: the pieces
     :return: None
     """
 
@@ -43,6 +45,26 @@ def generic_heat_plot(
                 color=cmap(val)
             ))
 
+    # Generate a label
+    player_labels = {
+        'True': 'white',
+        'False': 'black',
+        'None': 'both',
+    }
+    piece_label = 'all' if pieces is None else ', '.join(pieces)
+    f_piece_label = 'all' if pieces is None else ''.join(pieces)
+    player = player_labels[str(white)]
+    label = f'Player: {player}, Pieces: {piece_label}'
+    fname = f'{player}_{f_piece_label}'
+
+    # Add label
+    ax.text(
+        -0.5,
+        7.75,
+        label,
+        clip_on=False,
+    )
+
     # Format
     ax.set_xlim(-0.5, 7.5)
     ax.set_ylim(-0.5, 7.5)
@@ -51,9 +73,13 @@ def generic_heat_plot(
     ax.set_xticklabels(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'])
     ax.set_yticks(range(8))
     ax.set_yticklabels(range(1, 9))
+    ax.tick_params(axis=u'both', which=u'both', length=0)
+    for pos in ['top', 'right', 'bottom', 'left']:
+        ax.spines[pos].set_visible(False)
 
     # Save
-    figure.savefig(f'figures/{name}.png')
+    figure.savefig(f'figures/{fname}.png')
+
 
 def plot_heat(
         white: Optional[bool] = None,
@@ -72,8 +98,7 @@ def plot_heat(
 
     # If fast, truncate
     if fast:
-        print('fast!')
-        idf = idf.head(100000)
+        idf = idf.head(10000)
 
     # Make a place to store counts
     count = np.zeros((8, 8), dtype=int)
@@ -84,7 +109,8 @@ def plot_heat(
     # Plot
     generic_heat_plot(
         n=count,
-        name='test'
+        white=white,
+        pieces=pieces,
     )
 
 
@@ -92,7 +118,7 @@ if __name__ == '__main__':
     plot_heat(
         fast=True,
         white=True,
-        pieces=None,
+        pieces=['K', 'Q'],
     )
 
 
